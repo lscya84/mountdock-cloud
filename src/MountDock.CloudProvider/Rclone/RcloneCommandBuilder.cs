@@ -4,11 +4,12 @@ public static class RcloneCommandBuilder
 {
     public static IReadOnlyList<string> BuildLsJson(string rclonePath, string remotePath, bool recursive, string? configPath)
     {
-        var args = BaseCommand(rclonePath, "lsjson", remotePath, configPath);
+        var args = BaseCommand(rclonePath, "lsjson", remotePath, configPath: null);
         if (recursive)
         {
             args.Add("--recursive");
         }
+        AddConfig(args, configPath);
         return args;
     }
 
@@ -22,6 +23,11 @@ public static class RcloneCommandBuilder
         return BaseCommand(rclonePath, "deletefile", remotePath, configPath);
     }
 
+    public static IReadOnlyList<string> BuildMoveTo(string rclonePath, string source, string destination, string? configPath)
+    {
+        return BaseCommand(rclonePath, "moveto", source, configPath, destination);
+    }
+
     private static List<string> BaseCommand(string rclonePath, string command, string firstPath, string? configPath, string? secondPath = null)
     {
         if (string.IsNullOrWhiteSpace(rclonePath)) throw new ArgumentException("rclone path is required.", nameof(rclonePath));
@@ -33,11 +39,16 @@ public static class RcloneCommandBuilder
         {
             args.Add(secondPath);
         }
+        AddConfig(args, configPath);
+        return args;
+    }
+
+    private static void AddConfig(List<string> args, string? configPath)
+    {
         if (!string.IsNullOrWhiteSpace(configPath))
         {
             args.Add("--config");
             args.Add(configPath);
         }
-        return args;
     }
 }

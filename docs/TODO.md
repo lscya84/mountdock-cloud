@@ -10,7 +10,8 @@
 
 ## Milestone 1 — CfAPI feasibility spike
 
-- [ ] Verify .NET SDK and Windows build environment.
+- [x] Verify .NET SDK is available for structural builds/tests in the Hermes environment.
+- [ ] Verify Windows build/runtime environment for real CfAPI execution.
 - [ ] Implement `CloudFilesApi` P/Invoke signatures for sync root registration.
 - [ ] Implement test sync root registration.
 - [ ] Implement placeholder creation for one file.
@@ -20,19 +21,21 @@
 
 ## Milestone 2 — rclone read-only backend
 
-- [ ] Implement `RcloneCommandBuilder` fully.
-- [ ] Implement `RcloneClient` process runner with timeout/cancellation.
+- [x] Implement `RcloneCommandBuilder` for lsjson/copyto/deletefile/moveto.
+- [x] Implement `RcloneClient` process runner with cancellation and stdout/stderr capture.
+- [ ] Add explicit timeout wrapper policy around hydration/download operations.
 - [ ] List a test remote directory with `lsjson`.
 - [ ] Create placeholders from remote metadata.
 - [ ] Hydrate remote file content through rclone.
 
 ## Milestone 3 — metadata state
 
-- [ ] Add SQLite state database.
-- [ ] Add `items` table.
-- [ ] Add `operations` table.
-- [ ] Add conflict table.
-- [ ] Add tests for persistence and state transitions.
+- [x] Add SQLite state database.
+- [x] Add `items` table.
+- [x] Add `operations` table.
+- [x] Add conflict table.
+- [x] Add tests for basic persistence and state transitions.
+- [ ] Add full operation queue helpers and conflict helpers.
 
 ## Milestone 4 — write-back safety
 
