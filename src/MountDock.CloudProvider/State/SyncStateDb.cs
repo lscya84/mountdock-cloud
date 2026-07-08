@@ -286,7 +286,12 @@ public sealed class SyncStateDb
 
     private SqliteConnection OpenConnection()
     {
-        var connection = new SqliteConnection($"Data Source={DatabasePath}");
+        var connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = DatabasePath,
+            Pooling = false,
+        }.ToString();
+        var connection = new SqliteConnection(connectionString);
         connection.Open();
         return connection;
     }
