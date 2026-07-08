@@ -2,7 +2,12 @@ using System.Diagnostics;
 
 namespace MountDock.CloudProvider.Rclone;
 
-public sealed class RcloneClient
+public interface IRcloneRunner
+{
+    Task<RcloneResult> RunRequiredWithTimeoutAsync(IReadOnlyList<string> command, TimeSpan timeout, CancellationToken cancellationToken);
+}
+
+public sealed class RcloneClient : IRcloneRunner
 {
     public async Task<RcloneResult> RunAsync(IReadOnlyList<string> command, CancellationToken cancellationToken)
     {
@@ -59,6 +64,19 @@ public sealed class RcloneClient
     public async Task<RcloneResult> RunRequiredAsync(IReadOnlyList<string> command, CancellationToken cancellationToken)
     {
         var result = await RunAsync(command, cancellationToken);
+        if (!result.Success)
+        {
+            throw new RcloneCommandException(command, result);
+        }
+        return result;
+    }
+
+    public async Task<RcloneResult> RunRequiredWithTimeoutAsync(
+        IReadOnlyList<string> command,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        var result = await RunWithTimeoutAsync(command, timeout, cancellationToken);
         if (!result.Success)
         {
             throw new RcloneCommandException(command, result);

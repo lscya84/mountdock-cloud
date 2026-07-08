@@ -241,6 +241,20 @@ public sealed class SyncStateDb
         command.ExecuteNonQuery();
     }
 
+    public void MarkOperationSucceeded(long id)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE operations
+            SET status = 'succeeded', last_error = '', updated_at = $updated_at
+            WHERE id = $id
+            """;
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$updated_at", Now());
+        command.ExecuteNonQuery();
+    }
+
     public long AddConflict(SyncConflictDraft draft)
     {
         using var connection = OpenConnection();
