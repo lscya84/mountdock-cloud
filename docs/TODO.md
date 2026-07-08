@@ -1,60 +1,60 @@
 # MountDock Cloud TODO
 
-## Milestone 0 — Repository scaffold
+## 마일스톤 0 — 저장소 기본 골격
 
-- [x] Create new repository skeleton.
-- [x] Choose C#/.NET as provider-first language.
-- [x] Add architecture docs.
-- [x] Add Cloud Files API spike plan.
-- [x] Add rclone backend design.
+- [x] 새 저장소 골격 생성
+- [x] Provider 우선 언어로 C#/.NET 선택
+- [x] 아키텍처 문서 추가
+- [x] Cloud Files API 스파이크 계획 추가
+- [x] rclone 백엔드 설계 추가
 
-## Milestone 1 — CfAPI feasibility spike
+## 마일스톤 1 — CfAPI 가능성 검증 스파이크
 
-- [x] Verify .NET SDK is available for structural builds/tests in the Hermes environment.
-- [ ] Verify Windows build/runtime environment for real CfAPI execution.
-- [ ] Implement `CloudFilesApi` P/Invoke signatures for sync root registration.
-- [ ] Implement test sync root registration.
-- [ ] Implement placeholder creation for one file.
-- [ ] Implement hydration callback for one file.
-- [ ] Implement dehydrate/free-space debug action.
-- [ ] Document results in `docs/CLOUD_FILES_SPIKE_RESULTS.md`.
+- [x] Hermes 환경에서 구조적 빌드/테스트용 .NET SDK 확인
+- [ ] 실제 CfAPI 실행을 위한 Windows 빌드/런타임 환경 확인
+- [ ] sync root 등록용 `CloudFilesApi` P/Invoke 시그니처 구현
+- [ ] 테스트 sync root 등록 구현
+- [ ] 단일 파일 placeholder 생성 구현
+- [ ] 단일 파일 hydration callback 구현
+- [ ] dehydrate/free-space 디버그 동작 구현
+- [ ] 결과를 `docs/CLOUD_FILES_SPIKE_RESULTS.md`에 기록
 
-## Milestone 2 — rclone read-only backend
+## 마일스톤 2 — rclone 읽기 전용 백엔드
 
-- [x] Implement `RcloneCommandBuilder` for lsjson/copyto/deletefile/moveto.
-- [x] Implement `RcloneClient` process runner with cancellation and stdout/stderr capture.
-- [ ] Add explicit timeout wrapper policy around hydration/download operations.
-- [ ] List a test remote directory with `lsjson`.
-- [ ] Create placeholders from remote metadata.
-- [ ] Hydrate remote file content through rclone.
+- [x] `RcloneCommandBuilder`에 `lsjson` / `copyto` / `deletefile` / `moveto` 지원 추가
+- [x] `RcloneClient`에 취소 토큰 및 stdout/stderr 캡처 지원 추가
+- [x] hydration/download 작업용 명시적 timeout wrapper 추가
+- [ ] 테스트 remote 디렉터리를 `lsjson`으로 조회
+- [ ] remote metadata로 placeholder 생성
+- [ ] rclone을 통해 remote 파일 내용을 hydrate
 
-## Milestone 3 — metadata state
+## 마일스톤 3 — metadata 상태 저장소
 
-- [x] Add SQLite state database.
-- [x] Add `items` table.
-- [x] Add `operations` table.
-- [x] Add conflict table.
-- [x] Add tests for basic persistence and state transitions.
-- [ ] Add full operation queue helpers and conflict helpers.
+- [x] SQLite 상태 DB 추가
+- [x] `items` 테이블 추가
+- [x] `operations` 테이블 추가
+- [x] `conflicts` 테이블 추가
+- [x] 기본 persistence 및 state transition 테스트 추가
+- [x] operation queue helper 및 conflict helper 추가
 
-## Milestone 4 — write-back safety
+## 마일스톤 4 — write-back 안전성
 
-- [ ] Detect local dirty files.
-- [ ] Queue uploads.
-- [ ] Check remote metadata before upload.
-- [ ] Preserve both versions on conflict.
-- [ ] Avoid automatic destructive delete propagation.
+- [ ] 로컬 dirty 파일 감지
+- [ ] upload queue 등록
+- [ ] 업로드 전 remote metadata 확인
+- [ ] 충돌 시 양쪽 버전 보존
+- [ ] 자동 파괴적 delete propagation 방지
 
-## Milestone 5 — Explorer UX
+## 마일스톤 5 — Explorer UX
 
-- [ ] Map Cloud Files states to Explorer-visible status.
-- [ ] Add pin/offline support.
-- [ ] Add dehydrate/free-space support.
-- [ ] Validate drive-letter vs sync-root behavior.
+- [ ] Cloud Files 상태를 Explorer-visible 상태로 매핑
+- [ ] pin/offline 지원
+- [ ] dehydrate/free-space 지원
+- [ ] drive-letter 방식과 sync-root 방식의 동작 차이 검증
 
-## Open questions
+## 미해결 질문
 
-- [ ] Does `subst` preserve Cloud Files placeholder behavior and Explorer status icons?
-- [ ] Should the provider be C# only or C# GUI + C++ CfAPI helper?
-- [ ] Which Windows versions must be supported?
-- [ ] How should installer/register/unregister lifecycle be handled?
+- [ ] `subst`가 Cloud Files placeholder 동작과 Explorer 상태 아이콘을 보존하는가?
+- [ ] provider를 C# 단독으로 갈지, C# GUI + C++ CfAPI helper로 나눌지 결정해야 하는가?
+- [ ] 지원 대상 Windows 버전은 어디까지인가?
+- [ ] installer/register/unregister lifecycle은 어떻게 처리할 것인가?

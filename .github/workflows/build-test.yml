@@ -1,0 +1,31 @@
+name: 빌드 및 테스트
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    name: .NET 빌드 및 테스트
+    runs-on: windows-latest
+
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: .NET 8 SDK 설정
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: 의존성 복원
+        run: dotnet restore MountDock.Cloud.sln
+
+      - name: 빌드
+        run: dotnet build MountDock.Cloud.sln --configuration Release --no-restore
+
+      - name: 테스트
+        run: dotnet test MountDock.Cloud.sln --configuration Release --no-build --verbosity normal

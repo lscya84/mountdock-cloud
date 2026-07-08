@@ -13,6 +13,39 @@ public sealed record SyncItem(
     string SyncState,
     string PinState);
 
+public sealed record SyncOperationDraft(
+    string Kind,
+    string ItemId,
+    string Path,
+    int Priority,
+    string PayloadJson);
+
+public sealed record SyncOperation(
+    long Id,
+    string Kind,
+    string ItemId,
+    string Path,
+    string Status,
+    int Priority,
+    int Attempts,
+    string PayloadJson,
+    string LastError);
+
+public sealed record SyncConflictDraft(
+    string ItemId,
+    string Path,
+    string LocalConflictPath,
+    string RemoteConflictPath,
+    string Reason);
+
+public sealed record SyncConflict(
+    long Id,
+    string ItemId,
+    string Path,
+    string LocalConflictPath,
+    string RemoteConflictPath,
+    string Reason);
+
 public sealed class SyncStateDb
 {
     public string DatabasePath { get; }
@@ -120,7 +153,7 @@ public sealed class SyncStateDb
         command.Parameters.AddWithValue("$local_state", item.LocalState);
         command.Parameters.AddWithValue("$sync_state", item.SyncState);
         command.Parameters.AddWithValue("$pin_state", item.PinState);
-        command.Parameters.AddWithValue("$updated_at", DateTimeOffset.UtcNow.ToString("O"));
+        command.Parameters.AddWithValue("$updated_at", Now());
         command.ExecuteNonQuery();
     }
 
@@ -135,17 +168,120 @@ public sealed class SyncStateDb
             """;
         command.Parameters.AddWithValue("$path", path);
         using var reader = command.ExecuteReader();
-        if (!reader.Read()) return null;
-        return new SyncItem(
-            ItemId: reader.GetString(0),
-            ParentId: reader.GetString(1),
-            Path: reader.GetString(2),
-            Name: reader.GetString(3),
-            IsDirectory: reader.GetInt32(4) != 0,
-            Size: reader.GetInt64(5),
-            LocalState: reader.GetString(6),
-            SyncState: reader.GetString(7),
-            PinState: reader.GetString(8));
+        return reader.Read() ? ReadSyncItem(reader) : null;
+    }
+
+    public long EnqueueOperation(SyncOperationDraft draft)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO operations (kind, item_id, path, priority, payload_json, status, attempts, last_error, created_at, updated_at)
+            VALUES ($kind, $item_id, $path, $priority, $payload_json, 'pending', 0, '', $created_at, $updated_at);
+            SELECT last_insert_rowid();
+            """;
+        var now = Now();
+        command.Parameters.AddWithValue("$kind", draft.Kind);
+        command.Parameters.AddWithValue("$item_id", draft.ItemId);
+        command.Parameters.AddWithValue("$path", draft.Path);
+        command.Parameters.AddWithValue("$priority", draft.Priority);
+        command.Parameters.AddWithValue("$payload_json", draft.PayloadJson);
+        command.Parameters.AddWithValue("$created_at", now);
+        command.Parameters.AddWithValue("$updated_at", now);
+        return (long)(command.ExecuteScalar() ?? 0L);
+    }
+
+    public IReadOnlyList<SyncOperation> GetPendingOperations(int limit)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, kind, item_id, path, status, priority, attempts, payload_json, last_error
+            FROM operations
+            WHERE status = 'pending'
+            ORDER BY priority ASC, id ASC
+            LIMIT $limit
+            """;
+        command.Parameters.AddWithValue("$limit", limit);
+        using var reader = command.ExecuteReader();
+        var operations = new List<SyncOperation>();
+        while (reader.Read())
+        {
+            operations.Add(ReadSyncOperation(reader));
+        }
+        return operations;
+    }
+
+    public SyncOperation? GetOperation(long id)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, kind, item_id, path, status, priority, attempts, payload_json, last_error
+            FROM operations
+            WHERE id = $id
+            """;
+        command.Parameters.AddWithValue("$id", id);
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? ReadSyncOperation(reader) : null;
+    }
+
+    public void MarkOperationFailed(long id, string error)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE operations
+            SET status = 'failed', attempts = attempts + 1, last_error = $error, updated_at = $updated_at
+            WHERE id = $id
+            """;
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$error", error);
+        command.Parameters.AddWithValue("$updated_at", Now());
+        command.ExecuteNonQuery();
+    }
+
+    public long AddConflict(SyncConflictDraft draft)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO conflicts (item_id, path, local_conflict_path, remote_conflict_path, reason, created_at, resolved_at)
+            VALUES ($item_id, $path, $local_conflict_path, $remote_conflict_path, $reason, $created_at, '');
+            SELECT last_insert_rowid();
+            """;
+        command.Parameters.AddWithValue("$item_id", draft.ItemId);
+        command.Parameters.AddWithValue("$path", draft.Path);
+        command.Parameters.AddWithValue("$local_conflict_path", draft.LocalConflictPath);
+        command.Parameters.AddWithValue("$remote_conflict_path", draft.RemoteConflictPath);
+        command.Parameters.AddWithValue("$reason", draft.Reason);
+        command.Parameters.AddWithValue("$created_at", Now());
+        return (long)(command.ExecuteScalar() ?? 0L);
+    }
+
+    public IReadOnlyList<SyncConflict> GetOpenConflicts()
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, item_id, path, local_conflict_path, remote_conflict_path, reason
+            FROM conflicts
+            WHERE resolved_at = ''
+            ORDER BY id ASC
+            """;
+        using var reader = command.ExecuteReader();
+        var conflicts = new List<SyncConflict>();
+        while (reader.Read())
+        {
+            conflicts.Add(new SyncConflict(
+                Id: reader.GetInt64(0),
+                ItemId: reader.GetString(1),
+                Path: reader.GetString(2),
+                LocalConflictPath: reader.GetString(3),
+                RemoteConflictPath: reader.GetString(4),
+                Reason: reader.GetString(5)));
+        }
+        return conflicts;
     }
 
     private SqliteConnection OpenConnection()
@@ -161,4 +297,28 @@ public sealed class SyncStateDb
         command.CommandText = sql;
         command.ExecuteNonQuery();
     }
+
+    private static SyncItem ReadSyncItem(SqliteDataReader reader) => new(
+        ItemId: reader.GetString(0),
+        ParentId: reader.GetString(1),
+        Path: reader.GetString(2),
+        Name: reader.GetString(3),
+        IsDirectory: reader.GetInt32(4) != 0,
+        Size: reader.GetInt64(5),
+        LocalState: reader.GetString(6),
+        SyncState: reader.GetString(7),
+        PinState: reader.GetString(8));
+
+    private static SyncOperation ReadSyncOperation(SqliteDataReader reader) => new(
+        Id: reader.GetInt64(0),
+        Kind: reader.GetString(1),
+        ItemId: reader.GetString(2),
+        Path: reader.GetString(3),
+        Status: reader.GetString(4),
+        Priority: reader.GetInt32(5),
+        Attempts: reader.GetInt32(6),
+        PayloadJson: reader.GetString(7),
+        LastError: reader.GetString(8));
+
+    private static string Now() => DateTimeOffset.UtcNow.ToString("O");
 }
